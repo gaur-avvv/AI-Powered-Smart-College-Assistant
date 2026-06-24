@@ -1,16 +1,19 @@
 import os
+import time
 from typing import List
 from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-# Depending on your environment, you can use ChatOpenAI or ChatOllama
-# components. Here we use ChatOpenAI as a standard default template.
-from langchain_openai import ChatOpenAI 
+# --- FIXED: Imported both create_tool_calling_agent and AgentExecutor ---
+
+from langchain_classic.agents import create_tool_calling_agent, AgentExecutor
+
+
+
+# --- Updated: Swapped OpenAI with Google Gemini Integration ---
+from langchain_google_genai import ChatGoogleGenerativeAI 
 from dotenv import load_dotenv
 
-# Ensure your API key is configured or loaded from your environment
-# os.environ["OPENAI_API_KEY"] = "your-openai-api-key"
-# os.environ["GEMINI_API_KEY"] = "your-gemeini-api-key"
+load_dotenv()
 
 # ==========================================
 # 1. TOOL DEFINITIONS
@@ -94,8 +97,11 @@ tools = [
 # 2. AGENT INITIALIZATION
 # ==========================================
 
-# Use model that natively supports OpenAI/LangChain tool-calling schemas
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+# --- Updated: Configured Gemini 1.5 Flash Model for Native Tool Routing ---
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash", 
+    temperature=0
+)
 
 # Build the system prompt guidelines
 prompt = ChatPromptTemplate.from_messages([
@@ -119,22 +125,21 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 # 3. TEST CASES EXECUTION RUNNER
 # ==========================================
 
+import time  # <-- Make sure this is added at the top or inside the block
+
+# ==========================================
+# 3. TEST CASES EXECUTION RUNNER
+# ==========================================
+
 if __name__ == "__main__":
     test_queries = [
-        # Query 1
         "I attended 72 classes out of 90. Am I eligible for exams?",
-        # Query 2
         "My marks are 95, 90, 88, 91 and 87. What is my grade?",
-        # Query 3
         "My course fee is 50000 and I have paid 35000. How much fee is pending?",
-        # Query 4
         "I returned a library book 8 days late. What is the fine amount?",
-        # Query 5
         "Hostel fee is 6000 per month and I stayed for 5 months. Calculate my hostel fee.",
-        # Multi-Tool Challenge
         ("I attended 80 classes out of 100. My marks are 90, 85, 88, 92 and 95. "
          "My course fee is 60000 and I paid 45000. Provide: 1. Attendance Status 2. Grade 3. Pending Fee"),
-        # Bonus Challenge Query
         "Can you find the record for student ID STU001?"
     ]
 
@@ -143,7 +148,11 @@ if __name__ == "__main__":
         print(f"\n================ RUNNING TEST CASE {idx} ================")
         print(f"User Query: {query}\n")
         
-        response = agent_executor.invoke({"input": query})
-        
-        print("\nFinal Agent Response:")
-        print(response["output"])
+        try:
+            response = agent_executor.invoke({"input": query})
+            print("\nFinal Agent Response:")
+            print(response["output"])
+        except Exception as e:
+            print(f"\nAn error occurred: {e}")
+            
+        time.sleep(4)
